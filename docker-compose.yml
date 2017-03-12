@@ -1,0 +1,5 @@
+version: '2'
+services:
+  rspamd:
+    image: ezh1k/rspamd
+    restart: unless-stopped

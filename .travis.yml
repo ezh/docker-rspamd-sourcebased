@@ -1,0 +1,62 @@
+sudo: required
+
+language: java
+
+branches:
+  only:
+    - master
+    - /^v[0-9]+/
+
+env:
+  global:
+    - "COMMIT=${TRAVIS_COMMIT::8}"
+    - "REPO=ezh1k/rspamd"
+    - "TAG=$(if [ \"$TRAVIS_BRANCH\" == \"master\" ]; then echo \"latest\"; else echo $TRAVIS_BRANCH ; fi)"
+    - "GIT_TAG=$(git describe --tags --exact-match --abbrev=0)"
+    - "DOCKER_VERSION=1.12.3"
+    - "DOCKER_COMPOSE_VERSION=1.8.1"
+
+services:
+  - docker
+
+before-install:
+  - |
+    set -e
+    sudo rm /usr/local/bin/docker-compose
+    curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+    chmod +x docker-compose
+    sudo mv docker-compose /usr/local/bin
+
+before_script:
+  - |
+    # Prepare environment
+    set -e
+    echo $DOCKERHUB | base64 -d > .dockerhub.enc
+    openssl aes-256-cbc -K $encrypted_b9bc9fb32cec_key -iv $encrypted_b9bc9fb32cec_iv -in .dockerhub.enc -out .dockerhub -d
+    sh .dockerhub
+    # check docker versions
+    docker version
+    docker-compose version
+
+script:
+  - echo -e "\e[0;33mBuild docker image REPO:$REPO COMMIT:$COMMIT TAG:$TAG GIT_TAG:$GIT_TAG BUILD_NUMBER:$TRAVIS_BUILD_NUMBER\e[m" && echo -en 'travis_fold:start:build\\r'
+  - |
+    set -e
+    docker images
+    docker-compose -f docker-compose.yml -f docker-compose.travis.yml up -d
+    sleep 5
+    docker-compose exec rspamd /bin/bash -c 'ps aux | awk "/^root.*rspamd: main process/ {print \"TEST PASSED\"}"' | grep PASSED
+    docker-compose down
+    docker tag rspamd:latest $REPO
+    test -n "$GIT_TAG" && docker tag $REPO $REPO:$GIT_TAG || echo Skip publishing untagged docker image...
+  - echo -en 'travis_fold:end:build\\r'
+
+after_success:
+  - |
+    # Publish image
+    set -e
+    docker images
+    # publish if tag contains vNNN
+    echo $GIT_TAG | grep -qe '^v[0-9]' && docker push $REPO
+    echo Success
+

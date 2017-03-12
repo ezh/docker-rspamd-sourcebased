@@ -1,0 +1,9 @@
+version: '2'
+services:
+  rspamd:
+    build:
+      context: docker
+      args:
+          version: 1.5.2
+    image: rspamd:latest
+    restart: "no"
