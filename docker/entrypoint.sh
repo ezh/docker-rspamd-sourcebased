@@ -3,7 +3,7 @@
 
 PASSWORD=${PASSWORD:-rspamd}
 
-if [[ -n "$PASSWORD" ]]
+if [[ -n "$PASSWORD" && ! -e "/rspamd/etc/local.d/worker-controller.inc" ]]
 then
   echo "password = \"$PASSWORD\";" > /rspamd/etc/local.d/worker-controller.inc
   echo "bind_socket = "*:11334";" >> /rspamd/etc/local.d/worker-controller.inc
@@ -30,5 +30,7 @@ then
 fi
 echo Rspamd user defined as `id rspamd`
 
-exec $@
+chown -R rspamd:rspamd /rspamd
 
+echo "Execute $@"
+exec su -p rspamd -s /bin/bash -c '$@' -- - $@

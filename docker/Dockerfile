@@ -27,7 +27,6 @@ RUN set -x && \
     cmake ${rspamd_config} ../rspamd && make && make install && \
     mkdir /rspamd/log && mkdir /rspamd/run && mkdir /rspamd/db && \
     mkdir /rspamd/etc/local.d && mkdir /rspamd/etc/override.d && \
-    ln -s /dev/fd/1 /rspamd/log/rspamd.log && chown -R rspamd /rspamd && \
     apt-get purge -y git wget automake autoconf pkg-config gcc && \
     cd / && rm -rf /opt/rspamd* && apt-get clean && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/* /download/directory
